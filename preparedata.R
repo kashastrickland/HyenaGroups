@@ -37,7 +37,7 @@ starting_table |>
 
 meta_geneticdata<-left_join(meta,all_ids)
 
-##rename all non-crater clans as "X"
+##rename all non-crater clans as "X" (listing non-crater clan IDs present in data rather than searching within function)
 meta_geneticdata[meta_geneticdata$clan_birth%in%c("C","X","R","B","U","Y"),]$clan_birth<-"X"
 
 #########################################################
@@ -54,18 +54,66 @@ create_id_life.transition.table() |>
   mutate(year = lubridate::year(date),
          sex = fetch_id_sex(ID)) -> dispersingIDs
 
-dispersingIDs %>% 
+##calculate tenure in each clan to check if first or last even per ID is more accurate
+str(dispersingIDs)
+male_disp<-dispersingIDs[dispersingIDs$sex=="male",]
+
+male_disp |>
+  group_by(ID) |>
+  filter(n() >1) |>
+  ungroup() -> multi_disp
+
+##60 of 567 males have multiple dispersal events in adulthood
+multi_tenure<-create_id_life.history.table(unique(multi_disp$ID))
+multi_tenure$tenure<-multi_tenure$ending_date-multi_tenure$starting_date
+multi_tenure_adult<-multi_tenure[!multi_tenure$life_stage%in%c("cub","subadult"),]
+mta<-multi_tenure_adult[c("ID","clan","starting_date","tenure")]
+colnames(mta)<-c("ID","destination","date","tenure")
+mta |>
+  mutate(destination = recode(destination,"C"="X","R"="X","B"="X","U"="X")) -> mta
+
+##change inf to NA because death date unknown and therefore tenure cannot be calculated
+mta[mta$tenure==Inf,]$tenure<-NA
+
+left_join(multi_disp,mta) |>
+    group_by(ID)|>
+    filter(tenure==max(na.omit(tenure))) -> multi_disp_tens
+
+##compare this to if we took first vs last
+multi_disp%>% 
   group_by(ID) %>% 
-  slice(tail(row_number(),1)) -> dispersingIDs_last
+  slice(tail(row_number(),1)) -> multiIDs_last
+
+multi_disp%>% 
+  group_by(ID) %>% 
+  slice(head(row_number(),1)) -> multiIDs_first
+
+unique_to_longest_1 <- anti_join(multi_disp_tens,multiIDs_first)### 55% correct when first taken 
+unique_to_longest_last <- anti_join(multi_disp_tens,multiIDs_last)### 43% correct when last taken
+
+##use dispersal event that results in longest tenure
+## and merge that with other IDs who only have 1 dispersal event
+dispersingIDs_uni<-dispersingIDs[!dispersingIDs$ID%in%multi_disp_tens$ID,]
+dispersingIDs_uni %>% 
+  group_by(ID) %>% 
+  slice(head(row_number(),1)) -> dispersingIDs_uni
+
+post_dispersalIDS<-rbind(dispersingIDs_uni,multi_disp_tens)
+
+###take the last dispersal event per individual
+#dispersingIDs %>% 
+#  group_by(ID) %>% 
+#  slice(tail(row_number(),1)) -> dispersingIDs_last
 
 ##check it's worked - find IDs that have more than observation and confirm last is taken
-table(dispersingIDs$ID)
-dispersingIDs[dispersingIDs$ID=="N-144",]
-dispersingIDs_last[dispersingIDs_last$ID=="N-144",]
+#table(dispersingIDs$ID)
+#dispersingIDs[dispersingIDs$ID=="N-144",]
+#dispersingIDs_last[dispersingIDs_last$ID=="N-144",]
 ##looks all good
 
 ##post-dispersing clan membership
-dispersingIDs_dest<-dispersingIDs_last[c("ID","destination")]
+dispersingIDs_dest<-post_dispersalIDS[c("ID","destination")]
+#dispersingIDs_dest<-dispersingIDs_last[c("ID","destination")]
 
 ##merge with genetic data 
 meta_geneticdata2<-left_join(meta_geneticdata,dispersingIDs_dest)
@@ -75,6 +123,7 @@ meta_geneticdata2[is.na(meta_geneticdata2$destination),]$destination<-meta_genet
 colnames(meta_geneticdata2)[6]<-"clan_postdisp"
 
 ##calculate number of dispersal events per year from one clan (origin) to another (destination)
+##using all dispersal events of males
 create_id_life.transition.table() |> 
   mutate(origin = recode(origin,"C"="X","R"="X","B"="X","U"="X")) |>
   mutate(destination = recode(destination,"C"="X","R"="X","B"="X","U"="X")) |>
@@ -194,14 +243,14 @@ pedH$birth_year<-year(fetch_id_date.birth(pedH$ID))
 ##append clan membership to individuals for use in gg models
 pedH$birth_clan<-fetch_id_clan.birth(pedH$ID)
 pedH<-left_join(pedH,dispersingIDs_dest)
-pedH[is.na(pedH$destination),]$destination<-pedH[is.na(pedH$destination),]$birth_clan
-colnames(pedH)[ncol(pedH)]<-"clan_postdisp"
+#pedH[is.na(pedH$destination),]$destination<-pedH[is.na(pedH$destination),]$birth_clan
+#colnames(pedH)[ncol(pedH)]<-"clan_postdisp"
 
 ##replace and group all non-crater clan names to be X
 pedH[pedH$birth_clan%in%c("B","C","R","U"),]$birth_clan<-"X"
-pedH[pedH$clan_postdisp%in%c("B","C","R","U"),]$clan_postdisp<-"X"
+#pedH[pedH$clan_postdisp%in%c("B","C","R","U"),]$clan_postdisp<-"X"
 table(pedH$birth_clan)
-table(pedH$clan_postdisp)
+#table(pedH$clan_postdisp)
 
 ###########
 ###extract life history and phenotypic data for individuals that will be included in analyses
@@ -222,9 +271,9 @@ starting_table |>
          LRS = fetch_id_number.offspring(ID)) -> life_history_ids
 
 ##add on clan post dispersal
-life_history_ids<-left_join(life_history_ids,dispersingIDs_dest)
-life_history_ids[is.na(life_history_ids$destination),]$destination<-life_history_ids[is.na(life_history_ids$destination),]$birth_clan
-colnames(life_history_ids)[ncol(life_history_ids)]<-"clan_postdisp"
+#life_history_ids<-left_join(life_history_ids,dispersingIDs_dest)
+#life_history_ids[is.na(life_history_ids$destination),]$destination<-life_history_ids[is.na(life_history_ids$destination),]$birth_clan
+#colnames(life_history_ids)[ncol(life_history_ids)]<-"clan_postdisp"
 
 ##calculate clan size at birth
 life_history_ids |>
@@ -232,10 +281,10 @@ life_history_ids |>
 
 ##rename all non-crater clans to be "X"
 life_history_ids[life_history_ids$birth_clan%in%c("B","C","R","U"),]$birth_clan<-"X"
-life_history_ids[life_history_ids$clan_postdisp%in%c("B","C","R","U"),]$clan_postdisp<-"X"
+#life_history_ids[life_history_ids$clan_postdisp%in%c("B","C","R","U"),]$clan_postdisp<-"X"
 
 table(life_history_ids$birth_clan)
-table(life_history_ids$clan_postdisp)
+#table(life_history_ids$clan_postdisp)
 
 ##remove individuals still alive at last observation date or with missing key info
 life_history_ids<-life_history_ids[life_history_ids$alive_at_end==FALSE&
@@ -244,7 +293,7 @@ life_history_ids<-life_history_ids[life_history_ids$alive_at_end==FALSE&
                                      !is.na(life_history_ids$birth_year),]
 
 table(life_history_ids$birth_clan)
-table(life_history_ids$clan_postdisp)
+#table(life_history_ids$clan_postdisp)
 
 ##write out data for downstream analyses
 write.csv(life_history_ids,file="data/life_history_ids.csv",row.names = TRUE)

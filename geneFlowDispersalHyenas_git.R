@@ -296,6 +296,25 @@ fig2C<-ggplot(df_fst_plots,aes(x=dist,y=fst))+
         plot.margin = unit(c(1,2,1,2), "lines"))+
   ylim(0.01,0.045)
 
+df_fstCd_plots<-data.frame(disp=as.vector(dispM),fst=as.vector(fstCd_M),dist=as.vector(udDist))
+
+pdf("tables_figures/FigureS3.pdf")
+ggplot(df_fstCd_plots,aes(x=disp,y=fst))+
+  geom_point()+
+  geom_smooth(method = "lm", se = F,colour="black",alpha=1/2) +
+  geom_line(aes(y = stage(start = fst, after_stat = ymin)),
+            stat = "smooth", method = "lm", lty = "dashed",alpha=1/2) +
+  geom_line(aes(y = stage(fst, ymax)),
+            stat = "smooth", method = "lm", lty = "dashed",alpha=1/2) +
+  #geom_line(stat="smooth",method="glm",se=FALSE)+
+  theme_classic()+
+  xlab("\nProbability of dispersal between clans")+
+  ylab("Fst between clans\n")+
+  theme(text = element_text(size=14),
+        plot.margin = unit(c(1,2,1,2), "lines"))+
+  ylim(0.01,0.045)
+dev.off()
+
 ###############################################################################
 ##null model to test the probability of observed differentiation given random##
 ##dispersal of males - females retain natal clan membership####################
