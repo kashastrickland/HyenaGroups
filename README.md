@@ -1,4 +1,4 @@
-All code and data required to reproduce results from tha manuscript "Microevolutionary consequences of social structure in wild spotted hyenas". Note that individual hyena names were given new ID's for all data that does not correspond with the original name in the field database, but these ID's link between datasets in this repository.
+All code and data required to reproduce results from tha manuscript "Microevolutionary consequences of social structure in wild spotted hyenas". Note that individual hyena names were given new ID's for all data thatare not the same as the original name in the field database for the project, but these ID's are the same between datasets in this repository.
 
 CODE
 
