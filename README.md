@@ -20,4 +20,4 @@ DATA
 
 'udDists440_2.csv' ; geographic distance between clans (in metres)
 
-Please note the SNP genotype file "hyenas_deID.vcf" can be found at xxx
+Please note the processed SNP genotype file "hyenas_deID.vcf" can be found at 10.5281/zenodo.17609304. This file is required to reproduce genetic analyses, and is the genotype file post-bioinformatics and QC and filtering as described in the manuscript.
