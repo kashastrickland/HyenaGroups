@@ -52,10 +52,6 @@ naDam  <- which(is.na(pedH[, 3]))
 
 pedH$damOriginal <- pedH$dam
 pedH$sireOriginal <- pedH$sire
-  
-######################################################
-##run with heterogenous variances between crater clans
-######################################################
 
 pedHc<-pedH
 
