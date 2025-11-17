@@ -199,7 +199,7 @@ lh_ids_crater<-left_join(life_history_ids_crater,pedHc[c(1,7,10:27)])
 str(lh_ids_crater)
 
 #####################################################
-###relative fitness with a gaussian distribution#####
+###relativise fitness #####
 #####################################################
 
 lh_ids_crater$lrs_r<-lh_ids_crater$LRS/mean(lh_ids_crater$LRS)
