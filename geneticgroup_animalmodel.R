@@ -209,31 +209,34 @@ lh_ids_crater$lifespan_r<-lh_ids_crater$lifespan/mean(lh_ids_crater$lifespan)
 ##############run models with homogeneous variances#####
 ########################################################
 
+
 priors_c <- list(R = list(V = diag(1), nu = 0.001),
-               G = list(G1 = list(V = diag(1), nu = 1, alpha.mu = 0, alpha.V = diag(1)*1000),
-                        G2 = list(V = diag(1), nu = 1, alpha.mu = 0, alpha.V = diag(1)*1000),
-                        G3 = list(V = diag(1), nu = 1, alpha.mu = 0, alpha.V = diag(1)*1000),
-                        G4 = list(V = diag(1), nu = 1, alpha.mu = 0, alpha.V = diag(1)*1000)))
+                 G = list(G1 = list(V = diag(1), nu = 1, alpha.mu = 0, alpha.V = diag(1)*1000),
+                          G2 = list(V = diag(1), nu = 1, alpha.mu = 0, alpha.V = diag(1)*1000),
+                          G3 = list(V = diag(1), nu = 1, alpha.mu = 0, alpha.V = diag(1)*1000),
+                          G4 = list(V = diag(1), nu = 1, alpha.mu = 0, alpha.V = diag(1)*1000),
+                          G5 = list(V = diag(1), nu = 1, alpha.mu = 0, alpha.V = diag(1)*1000)))
 
 GGrelLRS_c <- MCMCglmm(lrs_r ~ sex*birth_rank +  f + clan_size + A + E + F + L + M + N + T + S, 
-                       random = ~ ID + mother + birth_year + birth_clan,
+                       random = ~ ID + mother + birth_year + birth_clan + clan_postdisp,
                        ginverse = list(ID=Ainv), 
                        data = lh_ids_crater,
-                       pr=TRUE,
                        prior = priors_c,
-                       nitt = 21000, burn = 1000, thin = 10)
+                       nitt = 50000, burn = 10000, thin = 10)
 summary(GGrelLRS_c)
 plot(GGrelLRS_c)
 
 GGrelLong_c <- MCMCglmm(lifespan_r ~ sex*birth_rank +  f + clan_size + A + E + F + L + M + N + T + S, 
-                       random = ~ ID + mother + birth_year + birth_clan,
-                       ginverse = list(ID=Ainv), 
-                       data = lh_ids_crater,
-                       pr=TRUE,
-                       prior = priors_c,
-                       nitt = 21000, burn = 1000, thin = 10)
+                        random = ~ ID + mother + birth_year + birth_clan + clan_postdisp,
+                        ginverse = list(ID=Ainv), 
+                        data = lh_ids_crater,
+                        prior = priors_c,
+                        nitt = 50000, burn = 10000, thin = 10)
 summary(GGrelLong_c)
 plot(GGrelLong_c)
+
+##check correlation between f and X
+cor(lh_ids_crater$f,lh_ids_crater$X)
 
 #############################
 ####make results tables######
@@ -248,14 +251,17 @@ fixed_effects_lrs_df<-fixed_effects_lrs_df [c(rownames(fixed_effects_lrs_df[1:11
 # Extracting random effects
 random_effects_lrs<-as.data.frame(GGrelLRS_c$VCV)
 random_effects_lrs_df <- data.frame(mean=round(colMeans(random_effects_lrs),3),
-                                        lwr5=apply(random_effects_lrs[1:5],2,quantile,0.05),
-                                        upr95=apply(random_effects_lrs[1:5],2,quantile,0.95))
+                                    lwr5=apply(random_effects_lrs[1:6],2,quantile,0.05),
+                                    upr95=apply(random_effects_lrs[1:6],2,quantile,0.95))
 
 colnames(random_effects_lrs_df)<-colnames(fixed_effects_lrs_df[1:3])
 random_effects_lrs_df[,2:3]<-round(random_effects_lrs_df[,2:3],3)
 
 ##combine fixed and random effects coefficients into one dataframe
 rs_lrs<-rbind(fixed_effects_lrs_df[1:3],random_effects_lrs_df)
+
+#random_effects_long_het<-random_effects_long_het[c("IndexA","IndexE","IndexF","IndexL","IndexM","IndexN","IndexS","IndexT","IndexX",
+#                                                   colnames(random_effects_long_het[10:20]))]
 
 ###lifespan
 # Extracting fixed effects
@@ -266,8 +272,8 @@ fixed_effects_long_df<-fixed_effects_long_df [c(rownames(fixed_effects_long_df[1
 # Extracting random effects
 random_effects_long<-as.data.frame(GGrelLong_c$VCV)
 random_effects_long_df <- data.frame(mean=round(colMeans(random_effects_long),3),
-                                         lwr5=apply(random_effects_long[1:5],2,quantile,0.05),
-                                         upr95=apply(random_effects_long[1:5],2,quantile,0.95))
+                                     lwr5=apply(random_effects_long[1:6],2,quantile,0.05),
+                                     upr95=apply(random_effects_long[1:6],2,quantile,0.95))
 
 colnames(random_effects_long_df)<-colnames(fixed_effects_long_df[1:3])
 random_effects_long_df[,2:3]<-round(random_effects_long_df[,2:3],3)
@@ -293,43 +299,44 @@ parameter_names<-c("Intercept",
                    "VA",
                    "VMother",
                    "VCohort",
-                   "VClan",
+                   "VBirthClan",
+                   "VAdultClan",
                    "VR")
 
 tab2<-data.frame(Parameter=parameter_names,
-                   LRS=paste0(rs_lrs$post.mean," (",rs_lrs$`l-95% CI`," - ",rs_lrs$`u-95% CI`,")"),
-                   Lifespan=paste0(rs_long$post.mean," (",rs_long$`l-95% CI`," - ",rs_long$`u-95% CI`,")"))
+                 LRS=paste0(rs_lrs$post.mean," (",rs_lrs$`l-95% CI`," - ",rs_lrs$`u-95% CI`,")"),
+                 Lifespan=paste0(rs_long$post.mean," (",rs_long$`l-95% CI`," - ",rs_long$`u-95% CI`,")"))
 
 #################################
 ##with heterogeneous variances###
 #################################
 
 priorsGG_c <- list(R = list(V = diag(8), nu = 0.002),
-                 G = list(G1 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
-                          G2 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
-                          G3 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
-                          G4 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
-                          G5 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
-                          G6 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
-                          G7 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
-                          G8 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
-                          G9 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
-                          G10 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
-                          G11 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
-                          G12 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000)))
+                   G = list(G1 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
+                            G2 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
+                            G3 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
+                            G4 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
+                            G5 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
+                            G6 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
+                            G7 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
+                            G8 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
+                            G9 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
+                            G10 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
+                            G11 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
+                            G12 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000),
+                            G13 = list(V = diag(1), nu = 2, alpha.mu = 0, alpha.V = diag(1)*1000)))
 
 GGrelLRS_hetvar_c <- MCMCglmm(lrs_r ~ sex*birth_rank + f + clan_size + A + E + F + L + M + N + T + S,
-                         random = ~ IndexX + IndexA + IndexF + IndexE + IndexN + IndexT + IndexS +
-                          IndexM + IndexL + mother + birth_year + birth_clan,
-                          ginverse = list(IndexX = AinvcX, IndexA = AinvcA, IndexF = AinvcF, 
-                                           IndexE = AinvcE, IndexN = AinvcN, IndexT = AinvcT,
-                                           IndexS = AinvcS, IndexM = AinvcM, IndexL = AinvcL),
-                         rcov=~idh(birth_clan):units,
-                         data = lh_ids_crater,
-                         family = "gaussian",
-                         prior = priorsGG_c,
-                         pr=TRUE,
-                         nitt = 18000, burn = 3000, thin = 10)
+                              random = ~ IndexX + IndexA + IndexF + IndexE + IndexN + IndexT + IndexS +
+                                IndexM + IndexL + mother + birth_year + birth_clan + clan_postdisp,
+                              ginverse = list(IndexX = AinvcX, IndexA = AinvcA, IndexF = AinvcF, 
+                                              IndexE = AinvcE, IndexN = AinvcN, IndexT = AinvcT,
+                                              IndexS = AinvcS, IndexM = AinvcM, IndexL = AinvcL),
+                              rcov=~idh(birth_clan):units,
+                              data = lh_ids_crater,
+                              family = "gaussian",
+                              prior = priorsGG_c,
+                              nitt = 60000, burn = 10000, thin = 10)
 
 plot(GGrelLRS_hetvar_c)
 summary(GGrelLRS_hetvar_c)
@@ -337,29 +344,23 @@ summary(GGrelLRS_hetvar_c)
 ############lifespan
 GGrelLong_hetvar_c <- MCMCglmm(lifespan_r ~ sex*birth_rank + f + clan_size + A + E + F + L + M + N + T + S,
                                random = ~ IndexX + IndexA + IndexF + IndexE + IndexN + IndexT + IndexS +
-                               IndexM + IndexL + mother + birth_year + birth_clan,
+                                 IndexM + IndexL + mother + birth_year + birth_clan +  clan_postdisp,
                                ginverse = list(IndexX = AinvcX, IndexA = AinvcA, IndexF = AinvcF, 
                                                IndexE = AinvcE, IndexN = AinvcN, IndexT = AinvcT,
                                                IndexS = AinvcS, IndexM = AinvcM, IndexL = AinvcL),
-                              rcov=~idh(birth_clan):units,
-                              data = lh_ids_crater,
-                              family = "gaussian",
-                              prior = priorsGG_c,
-                              pr=TRUE,
-                              nitt = 18000, burn = 3000, thin = 10)
+                               rcov=~idh(birth_clan):units,
+                               data = lh_ids_crater,
+                               family = "gaussian",
+                               prior = priorsGG_c,
+                               nitt = 60000, burn = 10000, thin = 10)
 
 plot(GGrelLong_hetvar_c)
 summary(GGrelLong_hetvar_c)
 
 ####save model objects - as workspace at this point
-save.image(file="modelResults_Robjects/GGmods_ranefsaved.RData")
+save.image(file="modelResults_Robjects/GGmods_adultclan_R1.RData")
 ####reload model objects if coming back later
-load(file="modelResults_Robjects/GGmods.RData")
-
-
-#############################
-####make results tables######
-#############################
+load(file="modelResults_Robjects/GGmods_adultclan_R1.RData")
 
 # Extracting fixed effects
 fixed_effects_lrs_het <- round(summary(GGrelLRS_hetvar_c)$solutions,3)
@@ -367,12 +368,13 @@ fixed_effects_lrs_het_df <- as.data.frame(fixed_effects_lrs_het)
 
 # Extracting random effects
 random_effects_lrs_het<-as.data.frame(GGrelLRS_hetvar_c$VCV)
+head(random_effects_lrs_het)
 random_effects_lrs_het<-random_effects_lrs_het[c("IndexA","IndexE","IndexF","IndexL","IndexM","IndexN","IndexS","IndexT","IndexX",
-                                                   colnames(random_effects_lrs_het[10:20]))]
+                                                 colnames(random_effects_lrs_het[10:21]))]
 
 random_effects_lrs_het_df <- data.frame(mean=round(colMeans(random_effects_lrs_het),3),
-                                        lwr5=apply(random_effects_lrs_het[1:20],2,quantile,0.05),
-                                        upr95=apply(random_effects_lrs_het[1:20],2,quantile,0.95))
+                                        lwr5=apply(random_effects_lrs_het[1:21],2,quantile,0.05),
+                                        upr95=apply(random_effects_lrs_het[1:21],2,quantile,0.95))
 
 colnames(random_effects_lrs_het_df)<-colnames(fixed_effects_lrs_het_df[1:3])
 random_effects_lrs_het_df[,2:3]<-round(random_effects_lrs_het_df[,2:3],3)
@@ -385,54 +387,54 @@ fixed_effects_long_het_df <- as.data.frame(fixed_effects_long_het)
 # Extracting random effects
 random_effects_long_het<-as.data.frame(GGrelLong_hetvar_c$VCV)
 random_effects_long_het<-random_effects_long_het[c("IndexA","IndexE","IndexF","IndexL","IndexM","IndexN","IndexS","IndexT","IndexX",
-                                                   colnames(random_effects_long_het[10:20]))]
+                                                   colnames(random_effects_long_het[10:21]))]
 
 random_effects_long_het_df <- data.frame(mean=round(colMeans(random_effects_long_het),3),
-                                        lwr5=apply(random_effects_long_het[1:20],2,quantile,0.05),
-                                        upr95=apply(random_effects_long_het[1:20],2,quantile,0.95))
+                                         lwr5=apply(random_effects_long_het[1:21],2,quantile,0.05),
+                                         upr95=apply(random_effects_long_het[1:21],2,quantile,0.95))
 
 colnames(random_effects_long_het_df)<-colnames(fixed_effects_long_het_df[1:3])
 random_effects_long_het_df[,2:3]<-round(random_effects_long_het_df[,2:3],3)
 
 #####now compile all the results from models into a single dataframe
+##Table 2
 parameter_names2<-c("VAAirstrip",
-  "VAEngitati",
-  "VAForest",
-  "VALemala",
-  "VAMunge",
-  "VANgoitokitok",
-  "VAShamba",
-  "VATriangle",
-  "VANon-crater",
-  "VMother",
-  "VCohort",
-  "VClan",
-  "VRAirstrip",
-  "VREngitati",
-  "VRForest",
-  "VRLemala",
-  "VRMunge",
-  "VRNgoitokitok",
-  "VRShamba",
-  "VRTriangle")
+                    "VAEngitati",
+                    "VAForest",
+                    "VALemala",
+                    "VAMunge",
+                    "VANgoitokitok",
+                    "VAShamba",
+                    "VATriangle",
+                    "VANon-crater",
+                    "VMother",
+                    "VCohort",
+                    "VBirthClan",
+                    "VAdultClan",
+                    "VRAirstrip",
+                    "VREngitati",
+                    "VRForest",
+                    "VRLemala",
+                    "VRMunge",
+                    "VRNgoitokitok",
+                    "VRShamba",
+                    "VRTriangle")
 
 tab3<-data.frame(Parameter = parameter_names2,
                  LRS = paste0(random_effects_lrs_het_df$post.mean," (",random_effects_lrs_het_df$`l-95% CI`," - ",random_effects_lrs_het_df$`u-95% CI`,")"),
                  lifespan = paste0(random_effects_long_het_df$post.mean," (",random_effects_long_het_df$`l-95% CI`," - ",random_effects_long_het_df$`u-95% CI`,")"))
 
-
-
-##Table S1:
+##Table S2:
 fixed_effects_lrs_het_df<-fixed_effects_lrs_het_df[c(rownames(fixed_effects_lrs_het_df[1:11,]),"S","T","sexmale:birth_rank"),]
 fixed_effects_long_het_df<-fixed_effects_long_het_df[c(rownames(fixed_effects_long_het_df[1:11,]),"S","T","sexmale:birth_rank"),]
 
 tabS1<-data.frame(Parameter=parameter_names[1:14],
-                   LRS=paste0(fixed_effects_lrs_het_df$post.mean," (",fixed_effects_lrs_het_df$`l-95% CI`," - ",fixed_effects_lrs_het_df$`u-95% CI`,")"),
-                   Lifespan = paste0(fixed_effects_long_het_df$post.mean," (",fixed_effects_long_het_df$`l-95% CI`," - ",fixed_effects_long_het_df$`u-95% CI`,")"))
+                  LRS=paste0(fixed_effects_lrs_het_df$post.mean," (",fixed_effects_lrs_het_df$`l-95% CI`," - ",fixed_effects_lrs_het_df$`u-95% CI`,")"),
+                  Lifespan = paste0(fixed_effects_long_het_df$post.mean," (",fixed_effects_long_het_df$`l-95% CI`," - ",fixed_effects_long_het_df$`u-95% CI`,")"))
 
-write.csv(tab2,file="tables_figures/Table2.csv",row.names = FALSE)
-write.csv(tab3,file="tables_figures/Table3.csv",row.names = FALSE)
-write.csv(tabS1,file="tables_figures/TableS1.csv",row.names = FALSE)
+write.csv(tab2,file="tables_figures/R1/Table2.csv",row.names = FALSE)
+write.csv(tab3,file="tables_figures/R1/Table3.csv",row.names = FALSE)
+write.csv(tabS1,file="tables_figures/R1/TableS1.csv",row.names = FALSE)
 
 ####################################################
 ## plot all effects ###############################
@@ -442,28 +444,16 @@ write.csv(tabS1,file="tables_figures/TableS1.csv",row.names = FALSE)
 ##predicting across original dataframe
 
 dummyped<-lh_ids_crater
-
-dummyped_lrspreds <- as.data.frame(predict(GGrelLRS_c, newdata=dummyped,
-                                            marginal=GGrelLRS_c$Random$formula,
-                                            type="response",
-                                            interval="confidence",
-                                            level=0.95))
-
-
 dummyped_longpreds <- as.data.frame(predict(GGrelLong_c, newdata=dummyped,
                                             marginal=GGrelLong_c$Random$formula,
                                             type="response",
                                             interval="confidence",
                                             level=0.95))
-dummyped$fitLRS<-dummyped_lrspreds$fit
-dummyped$lwrLRS<-dummyped_lrspreds$lwr
-dummyped$uprLRS<-dummyped_lrspreds$upr
-
 dummyped$fitL<-dummyped_longpreds$fit
 dummyped$lwrL<-dummyped_longpreds$lwr
 dummyped$uprL<-dummyped_longpreds$upr
 
-pdf("tables_figures/Figure3A.pdf")
+pdf("tables_figures/R1/Figure3A.pdf")
 ggplot(dummyped,aes(x=X,y=lrs_r))+
   geom_jitter(alpha=1/4)+
   geom_smooth(method = "lm", se = F,colour="black",alpha=1/2) +
@@ -477,7 +467,7 @@ ggplot(dummyped,aes(x=X,y=lrs_r))+
   theme(text = element_text(size=14))
 dev.off()
 
-pdf("tables_figures/Figure3B.pdf")
+pdf("tables_figures/R1/Figure3B.pdf")
 ggplot(dummyped,aes(x=X,y=lifespan_r))+
   geom_jitter(alpha=1/4)+
   geom_smooth(method = "lm", se = F,colour="black",alpha=1/2) +
@@ -503,7 +493,7 @@ var_lrsC<-as.data.frame(GGrelLRS_c$VCV)
 var_lrsC_l<-melt(var_lrsC[1])
 homVlrs<-data.frame(intercepts=c((quantile(var_lrsC_l$value,0.05)),
                                  (median(var_lrsC_l$value)),
-                                  (quantile(var_lrsC_l$value,0.95))),
+                                 (quantile(var_lrsC_l$value,0.95))),
                     names=c("lower5%","median","upper5%"))
 
 #lifespan
@@ -519,13 +509,13 @@ homVlong<-data.frame(intercepts=c((quantile(var_longC_l$value,0.05)),
 var_lrshetvarC<-as.data.frame(GGrelLRS_hetvar_c$VCV)
 var_lrshetvarC_l<-melt(var_lrshetvarC[1:9])
 var_lrshetvarC_l$variable<-factor(var_lrshetvarC_l$variable,
-          levels = c("IndexX","IndexT","IndexS","IndexN","IndexM","IndexL","IndexF","IndexE","IndexA"))
+                                  levels = c("IndexX","IndexT","IndexS","IndexN","IndexM","IndexL","IndexF","IndexE","IndexA"))
 
 #lifespan
 var_longhetvarC<-as.data.frame(GGrelLong_hetvar_c$VCV)
 var_longhetvarC_l<-melt(var_longhetvarC[1:9])
 var_longhetvarC_l$variable<-factor(var_longhetvarC_l$variable,
-           levels = c("IndexX","IndexT","IndexS","IndexN","IndexM","IndexL","IndexF","IndexE","IndexA"))
+                                   levels = c("IndexX","IndexT","IndexS","IndexN","IndexM","IndexL","IndexF","IndexE","IndexA"))
 
 ########################################
 ####extract residual variances##########
@@ -548,14 +538,14 @@ homVlong_r<-data.frame(intercepts=c((quantile(var_longC_l_r$value,0.05)),
 
 #####heterogeneous Vr
 #lrs
-var_lrshetvarC_l_r<-melt(var_lrshetvarC[13:20])
+var_lrshetvarC_l_r<-melt(var_lrshetvarC[14:21])
 var_lrshetvarC_l_r$variable<-factor(var_lrshetvarC_l_r$variable,
                                     levels = c("birth_clanT.units","birth_clanS.units","birth_clanN.units","birth_clanM.units","birth_clanL.units","birth_clanF.units","birth_clanE.units","birth_clanA.units"))
 
 #lifespan
-var_longhetvarC_l_r<-melt(var_longhetvarC[13:20])
+var_longhetvarC_l_r<-melt(var_longhetvarC[14:21])
 var_longhetvarC_l_r$variable<-factor(var_longhetvarC_l_r$variable,
-                                    levels = c("birth_clanT.units","birth_clanS.units","birth_clanN.units","birth_clanM.units","birth_clanL.units","birth_clanF.units","birth_clanE.units","birth_clanA.units"))
+                                     levels = c("birth_clanT.units","birth_clanS.units","birth_clanN.units","birth_clanM.units","birth_clanL.units","birth_clanF.units","birth_clanE.units","birth_clanA.units"))
 
 ###########################
 #######plot variances######
@@ -564,13 +554,13 @@ var_longhetvarC_l_r$variable<-factor(var_longhetvarC_l_r$variable,
 ###Va
 
 ##lrs
-pdf("tables_figures/Figure4A.pdf")
+pdf("tables_figures/R1/Figure4A.pdf")
 ggplot(var_lrshetvarC_l,aes(y=variable,color = variable, x = value)) +
   geom_vline(data=homVlrs,aes(xintercept=intercepts,linetype=names),alpha=1/2,col="black",key_glyph = "path")+
   scale_linetype_manual(values=c("median"="dashed","lower5%"="dotted","upper5%"="dotted"), 
                         labels=c("Posterior median","95% CI posterior"),
                         breaks=c("median","lower5%"),name = expression(V[A]^~~~LRS~~paste("N'goro"))) +
-  stat_pointinterval(quantiles = 50)+
+  stat_pointinterval()+
   theme_classic()+
   scale_color_manual(name="",guide="none",values=oCols)+
   ylab("")+
@@ -582,7 +572,7 @@ ggplot(var_lrshetvarC_l,aes(y=variable,color = variable, x = value)) +
 dev.off()
 
 ##lifespan
-pdf("tables_figures/Figure4B.pdf")
+pdf("tables_figures/R1/Figure4B.pdf")
 ggplot(var_longhetvarC_l,aes(y=variable,color = variable, x = value)) +
   geom_vline(data=homVlong,aes(xintercept=intercepts,linetype=names),alpha=1/2,col="black",key_glyph = "path")+
   scale_linetype_manual(values=c("median"="dashed","lower5%"="dotted","upper5%"="dotted"), 
@@ -603,7 +593,7 @@ dev.off()
 oCols2<-c("mediumorchid3","grey60","gray15","chartreuse3","tomato2","darkcyan","gold","royalblue")
 
 ##lrs
-pdf("tables_figures/FigureS5A.pdf")
+pdf("tables_figures/R1/FigureS5A.pdf")
 ggplot(var_lrshetvarC_l_r,aes(y=variable,color = variable, x = value)) +
   geom_vline(data=homVlrs_r,aes(xintercept=intercepts,linetype=names),alpha=1/2,col="black",key_glyph = "path")+
   scale_linetype_manual(values=c("median"="dashed","lower5%"="dotted","upper5%"="dotted"), 
@@ -621,7 +611,7 @@ ggplot(var_lrshetvarC_l_r,aes(y=variable,color = variable, x = value)) +
 dev.off()
 
 ##lifespan
-pdf("tables_figures/FigureS5B.pdf")
+pdf("tables_figures/R1/FigureS5B.pdf")
 ggplot(var_longhetvarC_l_r,aes(y=variable,color = variable, x = value)) +
   geom_vline(data=homVlong_r,aes(xintercept=intercepts,linetype=names),alpha=1/2,col="black",key_glyph = "path")+
   scale_linetype_manual(values=c("median"="dashed","lower5%"="dotted","upper5%"="dotted"), 
@@ -638,7 +628,6 @@ ggplot(var_longhetvarC_l_r,aes(y=variable,color = variable, x = value)) +
         legend.title.align=0.5)
 dev.off()
 
-
 ###################################################################################
 ## calculate posterior of differences in Va (LRS) between pairs of clans ##########
 ## and plot the posteriors as hisotgrams for supplement ###########################
@@ -653,25 +642,37 @@ diffs<-list()
 
 clanNames<-c("Non-crater","Airstrip","Forest","Engitati","Ngoitokitok",
              "Triangle","Shamba","Munge","Lemala")
+
+for (i in 1:9) {
   
-for (i in 1:9){
-  IDtmp<-clanNames[[i]]
-  tmp<-list()
-  for(j in 1:9){
-  tmp[[j]]<-data.frame(var_lrshetvarC[i]-var_lrshetvarC[j])
-  names(tmp[[j]])<-paste0(IDtmp,"_",clanNames[[j]])
+  IDtmp <- clanNames[[i]]
+  tmp <- list()
+  
+  for (j in 1:9) {
+    tmp[[j]] <- data.frame(var_lrshetvarC[i] - var_lrshetvarC[j])
+    names(tmp[[j]]) <- paste0(IDtmp, "_", clanNames[[j]])
   }
-  diffs[[i]] <- do.call("cbind",tmp[-i])
   
-  ##plot them as multipanel histogram
-  pdf(paste0("tables_figures/FigS6_",IDtmp,"_LRS.pdf"))
-  par(mfrow=c(4,2))
-  for(k in 1:length(diffs[[i]])){
-    hist(diffs[[i]][,k],breaks=30,main=names(diffs[[i]][k]),xlab="Difference in VA for LRS",col=alpha("cornflowerblue",0.2))
-    abline(v=0,col="darkorange",lwd=2)
+  diffs[[i]] <- do.call("cbind", tmp[-i])
+  pdf(paste0("tables_figures/R1/FigS6_", IDtmp, "_LRS.pdf"),height = 11,width = 7)
+  par(mfrow = c(4, 2),mar = c(4.5, 4, 4.5, 1.5) + 0.7)
+  
+  for (k in 1:length(diffs[[i]])) {
+    
+    mode <- posterior.mode(as.mcmc(diffs[[i]][, k]))
+    pd_95 <- quantile(diffs[[i]][, k], probs = c(0.05, 0.95))
+    
+    lab <- sprintf("%.3f [%.3f–%.3f]", mode, pd_95[1], pd_95[2])
+    lab <- paste0("mode [95% CIs] = ", lab)
+    
+    hist(diffs[[i]][, k],breaks = 30,main = "",xlab = "Difference in VA for LRS",
+         col = alpha("cornflowerblue", 0.2))
+    abline(v = 0, col = "darkorange", lwd = 2)
+    title(main = names(diffs[[i]][k]),line = 2.2,cex.main = 1.5)
+    mtext(lab,side = 3,line = 0.7, adj = 1,cex = 0.75)
   }
   dev.off()
-  }
+}
 
 ##calculate summary statistics for differences between clans in Va
 diffdDF<-do.call("cbind",diffs)
@@ -679,7 +680,7 @@ pd_lrs_mode<-posterior.mode(as.mcmc(diffdDF[1:72]))
 pd_lrs_95<-t(apply(diffdDF,2,quantile,probs=c(0.05,0.95)))
 
 pd_lrs<-cbind(pd_lrs_mode,pd_lrs_95)
-write.csv(pd_lrs,file="tables_figures/pd_prs.csv")
+write.csv(pd_lrs,file="tables_figures/R1/pd_prs.csv")
 
 #############
 ##lifespan####
@@ -687,7 +688,7 @@ write.csv(pd_lrs,file="tables_figures/pd_prs.csv")
 
 diffs_lifespan<-list()
 
-for (i in 1:9){
+for (i in 1:9) {
   IDtmp<-clanNames[[i]]
   tmp<-list()
   for(j in 1:9){
@@ -696,15 +697,27 @@ for (i in 1:9){
   }
   diffs_lifespan[[i]] <- do.call("cbind",tmp[-i])
   
-  ##plot them as multipanel histogram
-  pdf(paste0("tables_figures/FigS7_",IDtmp,"_Lifespan.pdf"))
-  par(mfrow=c(4,2))
-  for(k in 1:length(diffs_lifespan[[i]])){
-    hist(diffs_lifespan[[i]][,k],breaks=30,main=names(diffs_lifespan[[i]][k]),xlab="Difference in VA for Lifespan",col=alpha("cornflowerblue",0.2))
-    abline(v=0,col="darkorange",lwd=2)
+  diffs_lifespan[[i]] <- do.call("cbind", tmp[-i])
+  pdf(paste0("tables_figures/R1/FigS7_", IDtmp, "_Lifespan.pdf"),height = 11,width = 7)
+  par(mfrow = c(4, 2),mar = c(4.5, 4, 4.5, 1.5) + 0.7)
+  
+  for (k in 1:length(diffs_lifespan[[i]])) {
+    
+    mode <- posterior.mode(as.mcmc(diffs_lifespan[[i]][, k]))
+    pd_95 <- quantile(diffs_lifespan[[i]][, k], probs = c(0.05, 0.95))
+    
+    lab <- sprintf("%.3f [%.3f–%.3f]", mode, pd_95[1], pd_95[2])
+    lab <- paste0("mode [95% CIs] = ", lab)
+    
+    hist(diffs_lifespan[[i]][, k],breaks = 30,main = "",xlab = "Difference in VA for LRS",
+         col = alpha("cornflowerblue", 0.2))
+    abline(v = 0, col = "darkorange", lwd = 2)
+    title(main = names(diffs_lifespan[[i]][k]),line = 2.2,cex.main = 1.5)
+    mtext(lab,side = 3,line = 0.7, adj = 1,cex = 0.75)
   }
   dev.off()
 }
+
 
 ##calculate summary statistics for differences between clans in Va
 diffs_lifespandDF<-do.call("cbind",diffs_lifespan)
@@ -712,5 +725,5 @@ pd_lifespan_mode<-posterior.mode(as.mcmc(diffs_lifespandDF[1:72]))
 lifespan_pd_95<-t(apply(diffs_lifespandDF,2,quantile,probs=c(0.05,0.95)))
 
 pd_lifespan<-cbind(pd_lifespan_mode,lifespan_pd_95)
-write.csv(pd_lifespan,file="tables_figures/pd_lifespan.csv")
+write.csv(pd_lifespan,file="tables_figures/R1/pd_lifespan.csv")
 
