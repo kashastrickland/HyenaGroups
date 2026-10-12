@@ -24,18 +24,20 @@ if(!dir.exists("tables_figures")){
 ##https://github.com/flystar233/pyscript-bio/blob/master/glPcaFast.R
 source("glPcaFast.R")
 
+
 #############################
 ###### genomic PCA ##########
 #############################
 
 #read in filtered SNP dataset
-gl<-dartR::gl.read.vcf("hyenas_deIDd.vcf")
+gl<-dartR::gl.read.vcf("data/Hyenas_2ndRun_mincov10MaxCov110menderr01maf1miss70_dupsremovalidswap.recode.vcf")
 gl2<-gl.compliance.check(gl)
+
 popHet<-gl.report.heterozygosity(gl2)
 
 ##assigning population as individual ID's for managing the genlight object later
 pop(gl2)<-indNames(gl2)
-
+  
 ##removing any individuals from genetic data that does not have some metadata associated - only one individual
 meta_geneticdata2<-meta_geneticdata[!is.na(meta_geneticdata$clan_birth),]
 gl2<-gl.drop.ind(gl2,setdiff(indNames(gl2), meta_geneticdata2$ID))
@@ -50,17 +52,17 @@ var_frac <- hPCA$eig/sum(hPCA$eig)
 oCols<-c("royalblue","gold","darkcyan","tomato2","chartreuse3","gray15",
          "grey60","mediumorchid3","darkorange")
 
-pdf("tables_figures/R1/Fig1C.pdf")
-plot(hPCA$scores[,1],hPCA$scores[,2],type="n",cex.lab=1.4,cex.axis=1.2,
-     xlab=paste0("First PC (", round(100 * var_frac[1], 1), "%)"),
-     ylab=paste0("Second PC (", round(100 * var_frac[2], 1), "%)"))
+pdf("tables_figures/R2/Fig2A.pdf")
+plot(hPCA$scores[,1],hPCA$scores[,2],type="n",cex.lab=1.2,cex.axis=1,
+            xlab=paste0("First PC (", round(100 * var_frac[1], 1), "%)"),
+            ylab=paste0("Second PC (", round(100 * var_frac[2], 1), "%)"))
 s.class(hPCA$scores,fac=as.factor(meta_geneticdata2$clan_birth),add.plot=T,col=alpha(oCols,0.5))
 dev.off()
 
-pdf("tables_figures/R1/FigS1.pdf")
+pdf("tables_figures/R2/FigS1.pdf")
 plot(hPCA$scores[,3],hPCA$scores[,4],type="n",cex.lab=1.2,cex.axis=1.2,
-     xlab=paste0("Third PC (", round(100 * var_frac[3], 1), "%)"),
-     ylab=paste0("Fourth PC (", round(100 * var_frac[4], 1), "%)"))
+            xlab=paste0("Third PC (", round(100 * var_frac[3], 1), "%)"),
+            ylab=paste0("Fourth PC (", round(100 * var_frac[4], 1), "%)"))
 s.class(hPCA$scores[,3:4],fac=as.factor(meta_geneticdata2$clan_birth),add.plot=T,col=alpha(oCols,0.5))
 dev.off()
 
@@ -86,7 +88,7 @@ Table1<-data.frame(Clan=Table1$pop,
                    Heterozygosity = paste0(round(Table1$Ho,3)," (",round(Table1$HoSD,3),")"),
                    Expected_heterozygosity = paste0(round(Table1$uHe,3)," (",round(Table1$uHeSD,3),")"),
                    Fis = paste0(round(Table1$FIS,3)," (",round(Table1$FISLCI,3)," - ",round(Table1$FISHCI,3),")"))
-write.csv(Table1,"tables_figures/R1/Table1.csv",row.names = FALSE)
+write.csv(Table1,"tables_figures/R2/Table1.csv",row.names = FALSE)
 
 #########################################
 ##calculate pairwise fsts between clans##
@@ -196,12 +198,12 @@ fst_m$label <- ifelse(
 
 ##plot
 
-pdf("tables_figures/R1/Fig1D.pdf",width=9,height=9)
+pdf("tables_figures/R2/Fig2B.pdf",width=11,height=10)
 ggplot(data = fst_m, aes(x=Var1, y=Var2, fill=value)) + 
   geom_tile()+
   scale_fill_gradient2(name="Fst\n",low = "#2166AC", high = "#D6604D", mid = "#F7F7F7", 
                        midpoint = 0.02, limit = c(0,0.05))+
-  geom_text(aes(label = label), size = 3, show.legend = FALSE)+
+  geom_text(aes(label = label), size = 4, show.legend = FALSE)+
   theme_minimal()+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   theme(text=element_text(size=16),legend.title.align=0.5)+
@@ -272,7 +274,7 @@ ci_results_fstCd <- data.frame(
 ci_results_fstCd$significant <- !(ci_results_fstCd$lower <= 0 & ci_results_fstCd$upper >= 0)
 
 ci_results_fstCd$direction <- ifelse(ci_results_fstCd$lower > 0, "first > second",
-                                     ifelse(ci_results_fstCd$upper < 0, "first < second", "ns"))
+                               ifelse(ci_results_fstCd$upper < 0, "first < second", "ns"))
 
 ##extract bootstrap results
 fstCd_boot <- fstCd$Bootstraps
@@ -301,7 +303,7 @@ fstCd_ci_df$pair_sorted <- apply(
 fstCd_ci_df$significant <- !(fstCd_ci_df$lower <= 0 & fstCd_ci_df$upper >= 0)
 
 fstCd_ci_df$direction <- ifelse(fstCd_ci_df$lower > 0, "first > second",
-                                ifelse(fstCd_ci_df$upper < 0, "first < second", "ns"))
+                               ifelse(fstCd_ci_df$upper < 0, "first < second", "ns"))
 
 ##format FST matrix (same as before)
 fstCd$Fsts[upper.tri(fstCd$Fsts)] <- t(fstCd$Fsts)[upper.tri(fstCd$Fsts)]
@@ -343,7 +345,7 @@ fstCd_m$label <- ifelse(
 )
 
 ##plot
-pdf("tables_figures/R1/FigS2.pdf",width=9,height=9)
+pdf("tables_figures/R2/FigS2.pdf",width=9,height=9)
 ggplot(data = fstCd_m, aes(x=Var1, y=Var2, fill=value)) + 
   geom_tile() +
   geom_text(aes(label = label), size = 3, show.legend = FALSE) +
@@ -384,21 +386,20 @@ allDisp3 = allDisp3 %>%
   group_by(origin) %>%
   tidyr::complete(destination = unique(allDisp3$destination))
 
-pdf("tables_figures/R1/Figure1B.pdf",width=8,height=8)
-ggplot(data = allDisp3, aes(x=origin, y=destination, fill=probDisp)) + 
+#pdf("tables_figures/R2/Figure3A.pdf",width=8,height=8)
+fig3A<-ggplot(data = allDisp3, aes(x=origin, y=destination, fill=probDisp)) + 
   geom_tile()+
   scale_fill_gradient2(low = "#2166AC", high = "#D6604D", 
                        midpoint = 0.12, limit = c(0,0.6))+
   geom_text(data = allDisp2,aes(label = round(as.numeric(probDisp),3),size=5),show.legend = FALSE)+
   theme_minimal()+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  theme(text=element_text(size=18),
+  theme(text=element_text(size=16),
         legend.title=element_blank())+
-  
   xlab("\nOrigin")+
   ylab("Destination\n")+
-  coord_fixed()
-dev.off()
+coord_fixed()
+#dev.off()
 
 ##merge with pairwise Fst 
 fst_both<-merge(fstV,fstCdV,by=c("origin","destination"),all.x=TRUE)
@@ -489,7 +490,7 @@ for(i in 1:nboots){
   
   # ensure same ordering as other matrices
   fst_boot_mat <- fst_boot_mat[rownames(dispM), colnames(dispM)]
-  
+
   fit <- asnipe::mrqap.dsp(
     fst_boot_mat ~ dispM + udDist,
     test.statistic = "beta"
@@ -499,7 +500,7 @@ for(i in 1:nboots){
     fst_boot_mat ~ udDist,
     test.statistic = "beta"
   )
-  
+
   
   mrqap_results$beta_disp[i] <- fit$coefficients[2]
   mrqap_results$beta_dist[i] <- fit$coefficients[3]
@@ -525,7 +526,7 @@ summary_mrqap <- data.frame(
 #########plot results
 df_fst_plots<-data.frame(disp=as.vector(dispM),fst=as.vector(fst_M),dist=as.vector(udDist))
 
-pdf("tables_figures/R1/FigureS4.pdf")
+pdf("tables_figures/R2/FigureS4.pdf")
 ggplot(df_fst_plots,aes(x=dist,y=disp))+
   geom_point()+
   theme_classic()+
@@ -535,7 +536,7 @@ ggplot(df_fst_plots,aes(x=dist,y=disp))+
         plot.margin = unit(c(1,2,1,2), "lines"))
 dev.off()
 
-fig2B<-ggplot(df_fst_plots,aes(x=disp,y=fst))+
+fig3C<-ggplot(df_fst_plots,aes(x=disp,y=fst))+
   geom_point()+
   geom_smooth(method = "lm", se = F,colour="black",alpha=1/2) +
   geom_line(aes(y = stage(start = fst, after_stat = ymin)),
@@ -546,11 +547,12 @@ fig2B<-ggplot(df_fst_plots,aes(x=disp,y=fst))+
   theme_classic()+
   xlab("\nProbability of dispersal between clans")+
   ylab("Fst between clans\n")+
-  theme(text = element_text(size=14),
+  theme(text = element_text(size=16),
         plot.margin = unit(c(1,2,1,2), "lines"))+
   ylim(0.01,0.045)
 
-fig2C<-ggplot(df_fst_plots,aes(x=log(dist),y=(fst/(1-fst))))+
+pdf("tables_figures/R2/Fig2D.pdf",width=9,height=9)
+ggplot(df_fst_plots,aes(x=log(dist),y=(fst/(1-fst))))+
   geom_point()+
   geom_smooth(method = "lm", se = F,colour="black",alpha=1/2) +
   geom_line(aes(y = stage(start = fst/(1-fst), after_stat = ymin)),
@@ -561,9 +563,10 @@ fig2C<-ggplot(df_fst_plots,aes(x=log(dist),y=(fst/(1-fst))))+
   theme_classic()+
   xlab("\nln(Geographic distance between clans (m))")+
   ylab("Fst/(1 - Fst)\n")+
-  theme(text = element_text(size=14),
+  theme(text = element_text(size=16),
         plot.margin = unit(c(1,2,1,2), "lines"))+
   ylim(0.01,0.045)
+dev.off()
 
 df_fstCd_plots<-data.frame(disp=as.vector(dispM),fst=as.vector(fstCd_M),dist=as.vector(udDist))
 
@@ -625,7 +628,7 @@ fst_randDOdf<-data.frame(df2[,2:3],do.call("cbind",fst_randDO))
 fst_randDOdf$pair<-paste0(fst_randDOdf$origin,":",fst_randDOdf$destination)
 
 nullD<-as.data.frame(t(apply(fst_randDOdf[,3:1002],1,
-                             quantile,probs=c(0.05,0.95))))
+                      quantile,probs=c(0.05,0.95))))
 nullD$pair<-rownames(nullD)
 nullD_qs<-merge(fst_ci_df,nullD,by="pair")
 
@@ -634,10 +637,10 @@ nullD_qs$obs_rand<-ifelse(nullD_qs$lower>nullD_qs$`95%`,"TRUE","FALSE")
 names(nullD_qs)
 str(nullD_qs)
 nullDiagdf<-data.frame(origin=unique(nullD_qs$origin),
-                       destination=unique(nullD_qs$origin),
-                       observed=NA,
-                       X5.=NA,
-                       X95.=NA)
+                destination=unique(nullD_qs$origin),
+                observed=NA,
+                X5.=NA,
+                X95.=NA)
 
 colnames(nullDiagdf)<-colnames(nullD_qs)
 nullD_qsM<-rbind(nullD_qs,nullDiagdf)
@@ -645,20 +648,21 @@ nullD_qsM<-nullD_qsM[order(nullD_qsM$origin),]
 nullD_qsM<-nullD_qsM[order(nullD_qsM$destination),]
 
 mat95<-matrix(nullD_qsM$X95.,
-              length(unique(c(nullD_qsM$origin,nullD_qsM$destination))),
-              length(unique(c(nullD_qsM$origin,nullD_qsM$destination))))
+  length(unique(c(nullD_qsM$origin,nullD_qsM$destination))),
+  length(unique(c(nullD_qsM$origin,nullD_qsM$destination))))
 
 rownames(mat95)<-colnames(mat95)<-unique(unique(c(nullD_qsM$origin,nullD_qsM$destination)))
 
-fig2A<-ggplot(nullD_qs,aes(x=nullD_qs$'95%',y=mean))+
-  geom_point()+
-  xlab("\nExpected Fst (upper 95% quantile)")+
-  ylab("Fst between clans\n")+
-  theme_classic()+
-  theme(text = element_text(size=14),
-        plot.margin = unit(c(1,2,1,2), "lines"))+
-  xlim(0.005,0.045)+
-  ylim(0.01,0.045)
+fig3B<-ggplot(nullD_qs,aes(x=nullD_qs$'95%',y=mean))+
+     geom_point()+
+     xlab("\nExpected Fst under random dispersal (upper 95% quantile)")+
+     ylab("Fst between clans\n")+
+     theme_classic()+
+     theme(text = element_text(size=16),
+           plot.margin = unit(c(1,2,1,2), "lines"))+
+     xlim(0.005,0.045)+
+     ylim(0.01,0.045)
+
 
 ###############################
 ######IBD analysis#############
@@ -681,6 +685,7 @@ stopifnot(identical(rownames(gen2), rownames(idDist2)))
 diag(gen2)<-NA
 diag(idDist2)<-NA
 vegan::mantel(gen2,idDist2)
+vegan::mantel((fst_M/(1-fst_M)),log(udDist))
 
 ##plot isolation-by-distance
 pedH<-read.csv(file="data/pedigree_clans.csv",row.names = 1)
@@ -694,7 +699,8 @@ ibd_df<-data.frame(dist=as.vector(idDist2),
 
 ibd_dfA<-left_join(AmtV[,c(2,1)],ibd_df)
 
-fig2D<-ggplot(ibd_df,aes(x=dist,y=gen))+
+pdf("tables_figures/R2/fig2C.pdf",width=11)
+ggplot(ibd_df,aes(x=dist,y=gen))+
   geom_point(col="darkgrey",alpha=1/7)+
   geom_smooth(method = "lm", se = F,colour="black",alpha=1/2) +
   geom_line(aes(y = stage(start = gen, after_stat = ymin)),
@@ -704,11 +710,14 @@ fig2D<-ggplot(ibd_df,aes(x=dist,y=gen))+
   theme_classic()+
   xlab("\nGeographic distance between individuals (m)")+
   ylab("Genetic distance between individuals (Nei's D)\n")+
-  theme(text = element_text(size=14),
+  theme(text = element_text(size=16),
         plot.margin = unit(c(1,2,1,2), "lines"))
+dev.off()
 
-pdf("tables_figures/R1/Figure2.pdf",height=10,width=11)
-plot_grid(fig2A,fig2B,fig2C,fig2D,ncol=2,labels = c("A","B","C","D"))
+pdf("tables_figures/R2/Figure3.pdf",height=23,width=10)
+plot_grid(fig3A,fig3B,fig3C,ncol=1,labels = c("A","B","C"),
+          align = "v")
 dev.off()
 
 save.image("modelResults_Robjects/popgen_R1.RData")
+
