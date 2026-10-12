@@ -453,7 +453,7 @@ dummyped$fitL<-dummyped_longpreds$fit
 dummyped$lwrL<-dummyped_longpreds$lwr
 dummyped$uprL<-dummyped_longpreds$upr
 
-pdf("tables_figures/R1/Figure3A.pdf")
+pdf("tables_figures/R1/Figure4A.pdf")
 ggplot(dummyped,aes(x=X,y=lrs_r))+
   geom_jitter(alpha=1/4)+
   geom_smooth(method = "lm", se = F,colour="black",alpha=1/2) +
@@ -467,7 +467,7 @@ ggplot(dummyped,aes(x=X,y=lrs_r))+
   theme(text = element_text(size=14))
 dev.off()
 
-pdf("tables_figures/R1/Figure3B.pdf")
+pdf("tables_figures/R1/Figure4B.pdf")
 ggplot(dummyped,aes(x=X,y=lifespan_r))+
   geom_jitter(alpha=1/4)+
   geom_smooth(method = "lm", se = F,colour="black",alpha=1/2) +
@@ -551,41 +551,56 @@ var_longhetvarC_l_r$variable<-factor(var_longhetvarC_l_r$variable,
 #######plot variances######
 ###########################
 
+
 ###Va
+var_lrshetvarC_l_o<-var_lrshetvarC_l
+var_lrshetvarC_l_o$variable<-factor(var_lrshetvarC_l_o$variable,
+                                    levels=c("IndexL","IndexT","IndexM","IndexE",
+                  "IndexX","IndexA","IndexN","IndexS","IndexF"))
+
+oCols_lrs<-c("tomato2","mediumorchid3","chartreuse3","gold","darkorange","royalblue","gray15","grey60","darkcyan")
 
 ##lrs
-pdf("tables_figures/R1/Figure4A.pdf")
-ggplot(var_lrshetvarC_l,aes(y=variable,color = variable, x = value)) +
+pdf("tables_figures/R2/Figure5A.pdf")
+ggplot(var_lrshetvarC_l_o,aes(y=variable,color = variable, x = value)) +
   geom_vline(data=homVlrs,aes(xintercept=intercepts,linetype=names),alpha=1/2,col="black",key_glyph = "path")+
   scale_linetype_manual(values=c("median"="dashed","lower5%"="dotted","upper5%"="dotted"), 
                         labels=c("Posterior median","95% CI posterior"),
                         breaks=c("median","lower5%"),name = expression(V[A]^~~~LRS~~paste("N'goro"))) +
   stat_pointinterval()+
   theme_classic()+
-  scale_color_manual(name="",guide="none",values=oCols)+
+  scale_color_manual(name="",guide="none",values=oCols_lrs)+
   ylab("")+
   xlab(expression(V[A]^~~~LRS))+
-  scale_y_discrete(labels=c("Non-crater","Triangle","Shamba","Ngoitokitok","Munge","Lemala","Forest","Engitati","Airstrip"))+
+  scale_y_discrete(labels=c("Lemala","Triangle","Munge","Engitati","non-Crater","Airstrip","Ngoitokitok","Shamba","Forest"))+
   theme(text=element_text(size=14),
-        legend.justification = c(1, 1), legend.position = c(0.98, 0.97),
+        legend.justification = c(1, 1), legend.position = c(0.98, 0.2),
         legend.title.align=0.5)
 dev.off()
 
 ##lifespan
-pdf("tables_figures/R1/Figure4B.pdf")
-ggplot(var_longhetvarC_l,aes(y=variable,color = variable, x = value)) +
+
+var_longhetvarC_l_o<-var_longhetvarC_l
+var_longhetvarC_l_o$variable<-factor(var_longhetvarC_l_o$variable,
+                                    levels=c("IndexL","IndexM","IndexX","IndexE",
+                                             "IndexA","IndexS","IndexN","IndexF","IndexT"))
+
+oCols_life<-c("tomato2","chartreuse3","darkorange","gold","royalblue","grey60","gray15","darkcyan","mediumorchid3")
+
+pdf("tables_figures/R2/Figure5B.pdf")
+ggplot(var_longhetvarC_l_o,aes(y=variable,color = variable, x = value)) +
   geom_vline(data=homVlong,aes(xintercept=intercepts,linetype=names),alpha=1/2,col="black",key_glyph = "path")+
   scale_linetype_manual(values=c("median"="dashed","lower5%"="dotted","upper5%"="dotted"), 
                         labels=c("Posterior median","95% CI posterior"),
                         breaks=c("median","lower5%"),name = expression(V[A]^~~~Lifespan~~paste("N'goro"))) +
   stat_pointinterval()+
   theme_classic()+
-  scale_color_manual(name="",guide="none",values=oCols)+
+  scale_color_manual(name="",guide="none",values=oCols_life)+
   ylab("")+
   xlab(expression(V[A]^~~~Lifespan))+
-  scale_y_discrete(labels=c("Non-crater","Triangle","Shamba","Ngoitokitok","Munge","Lemala","Forest","Engitati","Airstrip"))+
+  scale_y_discrete(labels=c("Lemala","Munge","non-Crater","Engitati","Airstrip","Shamba","Ngoitokitok","Forest","Triangle"))+
   theme(text=element_text(size=14),
-        legend.justification = c(1, 1), legend.position = c(0.98, 0.97),
+        legend.justification = c(1, 1), legend.position = c(0.98, 0.2),
         legend.title.align=0.5)
 dev.off()
 
