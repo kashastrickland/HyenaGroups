@@ -1,5 +1,5 @@
 All code and data required to reproduce results from the manuscript:
-"Linking social structure to fine-scale genetic structure and genetic variance in fitness in spotted hyenas". 
+"Social structure may shape fine-scale genetic structure and genetic variance in fitness in spotted hyenas". 
 
 Note that individual hyena names were given new ID's for all data that are not the same as the original name in the field database for the project, but these ID's are the same between datasets in this repository.
 
